@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Form</title>
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Sing Up</h2>
+        <form action="/auth/singUp" method="POST">
+            <div class="input-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+            <div class="input-group">
+                <label for="correo">Correo:</label>
+                <input type="text" id="correo" name="correo" required>
+            </div>
+            <div class="input-group">
+                <label for="contraseña">Contraseña:</label>
+                <input type="password" id="contraseña" name="contraseña" required>
+            </div>
+            <div class="input-group">
+                <label for="contraseñaConfirm">Confirme su contraseña:</label>
+                <input type="password" id="contraseñaConfirm" name="contraseñaConfirm" required>
+            </div>
+            <button type="submit">Registrarse</button>
+        </form>
+        <% if (message) { %>
+            <h4>Mensaje: <%= message %> </h4>
+        <% } %>
+    </div>
+</body>
+</html>
