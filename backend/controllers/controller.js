@@ -1,5 +1,5 @@
 import { ruta } from "../service.js";
-import pool from "../conection/db.js";
+import Usuario from "../models/usuario.model.js"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
@@ -17,12 +17,9 @@ export const authSignUp = async (req, res) => {
   const { nombre, correo, contraseña, contraseñaConfirm } = req.body;
 
   try {
-    const result = await pool
-      .request()
-      .input("correo", correo)
-      .query("SELECT correo FROM usuarios WHERE correo = @correo");
+    const existingUser = await UserModel.findByEmail(correo);
 
-    if (result.recordset.length > 0) {
+    if (existingUser) {
       return res.render(ruta + "/singUp", {
         message: "El correo electrónico ya está registrado",
       });
@@ -33,32 +30,14 @@ export const authSignUp = async (req, res) => {
     }
 
     const hashPassword = await bcrypt.hash(contraseña, 8);
-
-    // Verifica si el correo electrónico termina en ".edu.hn"
     const esCorreoEduHn = correo.endsWith(".edu.hn");
-    let rol = "usuario_corriente"; // Por defecto, establece el rol como usuario corriente
-    if (esCorreoEduHn) {
-      rol = "admi"; // Si es un correo ".edu.hn", establece el rol como administrador
-    }
+    const rol = esCorreoEduHn ? "admi" : "usuario_corriente";
 
-    const nuevoUsuario = pool
-      .request()
-      .input("nombre", nombre)
-      .input("correo", correo)
-      .input("contraseña", hashPassword)
-      .input("rol", rol) // Agrega el rol al insertar el nuevo usuario
-      .query(
-        "INSERT INTO usuarios (nombre, correo, contraseña, rol) VALUES (@nombre, @correo, @contraseña, @rol)",
-        (error, results) => {
-          if (error) {
-            console.log(error);
-          } else {
-            return res.render(ruta + "/login", {
-              message: "Su usuario fue creado con éxito!",
-            });
-          }
-        }
-      );
+    await UserModel.createUser(nombre, correo, hashPassword, rol);
+
+    return res.render(ruta + "/login", {
+      message: "Su usuario fue creado con éxito!",
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).send("Error en el servidor");
@@ -69,24 +48,15 @@ export const authLoginSession = async (req, res) => {
   const { correo, contraseña } = req.body;
 
   try {
-    const result = await pool
-      .request()
-      .input("correo", correo)
-      .query("SELECT * FROM usuarios WHERE correo = @correo");
+    const usuario = await Usuario.findByEmail(correo);
 
-    if (result.recordset.length === 0) {
+    if (!usuario) {
       return res.render(ruta + "/login", {
         message: "El correo electrónico no está registrado",
       });
     }
 
-    const usuario = result.recordset[0];
-
-    // Compara la contraseña proporcionada por el usuario con la contraseña hasheada almacenada en la base de datos
-    const contraseñaValida = await bcrypt.compare(
-      contraseña,
-      usuario.contraseña
-    );
+    const contraseñaValida = await Usuario.comparePassword(contraseña, usuario.contraseña);
 
     if (!contraseñaValida) {
       return res.render(ruta + "/login", {
@@ -94,7 +64,6 @@ export const authLoginSession = async (req, res) => {
       });
     }
 
-    // Guardar la información del usuario en la sesión
     req.session.user = {
       id: usuario.id,
       nombre: usuario.nombre,
@@ -105,14 +74,11 @@ export const authLoginSession = async (req, res) => {
     req.session.isloggedin = true;
     req.session.username = usuario.id;
 
-    let value = correo.endsWith(".edu.hn");
-
-    // Verifica si el correo electrónico termina en ".edu.hn"
     if (correo.endsWith(".edu.hn")) {
       return res.render(ruta +'/bienvenidoAdmi', { user: req.session.user });
-  } else {
+    } else {
       return res.render(ruta +'/bienvenido', { user: req.session.user });
-  }
+    }
 
   } catch (error) {
     console.log(error);

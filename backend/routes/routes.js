@@ -11,14 +11,10 @@ router.get('/singUp/page',singUp)
 
 router.post('/auth/singUp', authSignUp);
 
-//----------Con JWT--------------
-//router.post('/auth/login', authLoginJwt);
-//router.get('/bienvenido:mensaje',verifyToken, bienvenida);
-
 //----------Con express session--------------
 router.post('/auth/login', authLoginSession);
-router.get('/bienvenido', verifySession, bienvenida);
 
+router.get('/bienvenido', verifySession, bienvenida);
 router.get('/bienvenidoAdmi',verifyRole, bienvenidoAdmi);
 
 router.get('/logout', logout);
