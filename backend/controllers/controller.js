@@ -17,7 +17,7 @@ export const authSignUp = async (req, res) => {
   const { nombre, correo, contraseña, contraseñaConfirm } = req.body;
 
   try {
-    const existingUser = await UserModel.findByEmail(correo);
+    const existingUser = await Usuario.findByEmail(correo);
 
     if (existingUser) {
       return res.render(ruta + "/singUp", {
@@ -33,7 +33,7 @@ export const authSignUp = async (req, res) => {
     const esCorreoEduHn = correo.endsWith(".edu.hn");
     const rol = esCorreoEduHn ? "admi" : "usuario_corriente";
 
-    await UserModel.createUser(nombre, correo, hashPassword, rol);
+    await Usuario.createUser(nombre, correo, hashPassword, rol);
 
     return res.render(ruta + "/login", {
       message: "Su usuario fue creado con éxito!",
@@ -75,9 +75,9 @@ export const authLoginSession = async (req, res) => {
     req.session.username = usuario.id;
 
     if (correo.endsWith(".edu.hn")) {
-      return res.render(ruta +'/bienvenidoAdmi', { user: req.session.user });
+      return res.redirect('/bienvenidoAdmi');
     } else {
-      return res.render(ruta +'/bienvenido', { user: req.session.user });
+      return res.redirect('/bienvenido');
     }
 
   } catch (error) {
@@ -86,6 +86,8 @@ export const authLoginSession = async (req, res) => {
   }
 };
 
+
+//ignorar
 export const authLoginJwt = async (req, res) => {
   const { correo, contraseña } = req.body;
 
@@ -142,10 +144,12 @@ export const logout = (req, res) => {
   });
 };
 
-export const bienvenida = async (req, res) => {
-  res.render(ruta + "/bienvenido");
+export const bienvenido = async (req, res) => {
+  const user = req.session.user;
+  res.render(ruta + "/bienvenido", { user });
 };
 
 export const bienvenidoAdmi = async (req, res) => {
-  res.render(ruta + "/bienvenidoAdmi");
+  const user = req.session.user;
+  res.render(ruta + "/bienvenidoAdmi",{ user });
 };

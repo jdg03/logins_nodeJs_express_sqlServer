@@ -1,6 +1,6 @@
 import Router from "express";
-import {login, singUp, authSignUp, authLoginJwt,authLoginSession, bienvenida, logout, bienvenidoAdmi}  from "../controllers/controller.js"
-import {verifyToken, verifySession, verifyPassport, verifyRole} from "../middleware/verify.js";
+import {login, singUp, authSignUp, authLoginJwt,authLoginSession, bienvenido, logout, bienvenidoAdmi}  from "../controllers/controller.js"
+import {verifyToken, verifySession,verifyRole} from "../middleware/verify.js";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.post('/auth/singUp', authSignUp);
 //----------Con express session--------------
 router.post('/auth/login', authLoginSession);
 
-router.get('/bienvenido', verifySession, bienvenida);
+router.get('/bienvenido', verifySession, bienvenido);
 router.get('/bienvenidoAdmi',verifyRole, bienvenidoAdmi);
 
 router.get('/logout', logout);
