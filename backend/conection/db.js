@@ -33,17 +33,20 @@ export default pool;
  * 
 
 create database nodejs_login
-use nodejs_login;
+use nodejs_login
 
-create table usuarios(
-	id INTEGER identity(1,1) PRIMARY KEY,
-	nombre VARCHAR(200) NOT NULL,
-	correo VARCHAR(200) NOT NULL,
-	contraseña VARCHAR(255) NOT NULL,
+create table roles(
+	id integer identity(1,1) primary key,
+	descripcion varchar(255)
+)
+
+CREATE TABLE usuarios(
+    id INTEGER IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    correo VARCHAR(255) NOT NULL,
+    contraseña VARCHAR(255) NOT NULL,
+    rol INTEGER DEFAULT 1 REFERENCES roles(id)
 );
-
-ALTER TABLE usuarios
-ADD rol VARCHAR(50) NOT NULL DEFAULT 'usuario_corriente';
 
  */
 

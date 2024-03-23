@@ -1,24 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { ruta } from '../service.js';
-
-const secretKey = 'SECRET';
-
-export const verifyToken = (req, res, next) => {
-    const token = req.query.token;
-
-    if (!token) {
-        return res.status(401).json({ error: 'Acceso denegado - Token no proporcionado' });
-    }
-
-    try {
-        const verified = jwt.verify(token, secretKey);
-        req.user = verified;
-        console.log("Token verificado");
-        next();
-    } catch (error) {
-        return res.status(403).json({ error: 'Token no válido' });
-    }
-};
+import { promisify } from 'util';
 
 export const verifySession = (req, res, next) => {
     
@@ -33,21 +14,26 @@ export const verifySession = (req, res, next) => {
 };
 
 
-export const verifyRole = (req, res, next) => {
-    
-    if (req.session && req.session.user && req.session.user.rol === 'admi') {
-        console.log("paso por el verifyRole")
-        next();
+// verifica si el tpken es valido
+export const verifyToken = async (req, res, next) => {
+    if (req.cookies.jwt) {
+      try {
+        
+        // Decodifica el token JWT para obtener la información del usuario
+        const tokenDecodificado = await promisify(jwt.verify)(req.cookies.jwt, process.env.JWT_SECRETO);
+
+        // Almacena la información del usuario decodificada en req.user para que esté disponible en las rutas posteriores
+        req.user = tokenDecodificado;
+
+        console.log("Usuario autenticado:", req.user);
+        // Continúa con el siguiente controlador
+        return next();
+      } catch (error) {
+        console.log(error);
+        return res.redirect('/');
+      }
     } else {
-        return res.status(401).json({ error: 'No es administrador, acceso denegado' });
+        // Si no se encuentra un token JWT en las cookies, redirige al usuario a la página principal
+      return res.redirect('/');
     }
-};
-
-
-
-
-export const verifyPassport = (req, res,next) => {
-
-    console.log("Passport funcionando");
-    next();
-}
+  };

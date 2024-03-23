@@ -3,16 +3,19 @@ import Usuario from "../models/usuario.model.js"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const secretKey = "SECRET";
+
 
 export const login = async (req, res) => {
-  res.render(ruta + "/login", { message: null });
+  const message = null
+  res.render(ruta + "/login", { message });
 };
 
 export const singUp = async (req, res) => {
-  res.render(ruta + "/singUp", { message: null });
+  const message = null
+  res.render(ruta + "/singUp", { message });
 };
 
+//registra un usuario
 export const authSignUp = async (req, res) => {
   const { nombre, correo, contraseña, contraseñaConfirm } = req.body;
 
@@ -20,24 +23,24 @@ export const authSignUp = async (req, res) => {
     const existingUser = await Usuario.findByEmail(correo);
 
     if (existingUser) {
-      return res.render(ruta + "/singUp", {
-        message: "El correo electrónico ya está registrado",
-      });
-    } else if (contraseña !== contraseñaConfirm) {
-      return res.render(ruta + "/singUp", {
-        message: "Las contraseñas no coinciden",
-      });
+
+     
+      return res.redirect("/singUp/page");
+      
+    }else if (contraseña !== contraseñaConfirm) {
+
+    
+      return res.redirect("/singUp/page");
     }
 
     const hashPassword = await bcrypt.hash(contraseña, 8);
     const esCorreoEduHn = correo.endsWith(".edu.hn");
-    const rol = esCorreoEduHn ? "admi" : "usuario_corriente";
+    const rol = esCorreoEduHn ? 2 : 1;
 
     await Usuario.createUser(nombre, correo, hashPassword, rol);
 
-    return res.render(ruta + "/login", {
-      message: "Su usuario fue creado con éxito!",
-    });
+   
+    return res.redirect("/login/page");
   } catch (error) {
     console.log(error);
     return res.status(500).send("Error en el servidor");
@@ -51,17 +54,15 @@ export const authLoginSession = async (req, res) => {
     const usuario = await Usuario.findByEmail(correo);
 
     if (!usuario) {
-      return res.render(ruta + "/login", {
-        message: "El correo electrónico no está registrado",
-      });
+     
+      return res.redirect("/login/page");
     }
 
     const contraseñaValida = await Usuario.comparePassword(contraseña, usuario.contraseña);
 
     if (!contraseñaValida) {
-      return res.render(ruta + "/login", {
-        message: "Contraseña incorrecta",
-      });
+      
+      return res.redirect("/login/page");
     }
 
     req.session.user = {
@@ -87,52 +88,7 @@ export const authLoginSession = async (req, res) => {
 };
 
 
-//ignorar
-export const authLoginJwt = async (req, res) => {
-  const { correo, contraseña } = req.body;
-
-  try {
-    const result = await pool
-      .request()
-      .input("correo", correo)
-      .query("SELECT * FROM usuarios WHERE correo = @correo");
-
-    if (result.recordset.length === 0) {
-      return res.render(ruta + "/login", {
-        message: "El correo electrónico no está registrado",
-      });
-    }
-
-    const usuario = result.recordset[0];
-
-    // Compara la contraseña proporcionada por el usuario con la contraseña hasheada almacenada en la base de datos
-    const contraseñaValida = await bcrypt.compare(
-      contraseña,
-      usuario.contraseña
-    );
-
-    if (!contraseñaValida) {
-      return res.render(ruta + "/login", {
-        message: "Contraseña incorrecta",
-      });
-    }
-
-    // Si las credenciales son válidas, genera un token JWT
-    const token = jwt.sign(
-      { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo },
-      "SECRET", //clave secreta
-      { expiresIn: "1h" } // Opcional: especifica el tiempo de expiración del token
-    );
-
-    // Redirigir al usuario a la página de bienvenida con el token
-    res.redirect(`/bienvenido%20Jwt?token=${token}`);
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send("Error en el servidor");
-  }
-};
-
-export const logout = (req, res) => {
+export const logoutSession = (req, res) => {
   // Destruye la sesión del usuario
   req.session.destroy((err) => {
     if (err) {
@@ -145,11 +101,74 @@ export const logout = (req, res) => {
 };
 
 export const bienvenido = async (req, res) => {
-  const user = req.session.user;
+  const user = req.user;
   res.render(ruta + "/bienvenido", { user });
 };
 
 export const bienvenidoAdmi = async (req, res) => {
-  const user = req.session.user;
+  const user = req.user;
   res.render(ruta + "/bienvenidoAdmi",{ user });
+};
+
+
+//_________________________________JWT_______________________________________________
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const {JWT_SECRETO, JWT_EXPIRES_IN} = process.env;
+
+
+
+export const authLoginJwt = async (req, res) => {
+ 
+  const { correo, contraseña } = req.body;
+
+  try {
+    const usuario = await Usuario.findByEmail(correo);
+
+    if (!usuario) {
+  
+      return res.redirect("/login/page");
+    }
+
+    const contraseñaValida = await Usuario.comparePassword(contraseña, usuario.contraseña);
+
+    if (!contraseñaValida) {
+     
+      return res.redirect("/login/page");
+    }
+
+    const token = jwt.sign(
+      { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo },
+      JWT_SECRETO,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const cookiesOptions = {
+      expires: new Date(Date.now() + (3 * 60 * 60 * 1000)),//tiempo que dura la cookie
+      httpOnly: true
+    };
+
+    // Almacenar el token en una cookie
+    res.cookie('jwt', token, cookiesOptions);
+
+    // Verificar el rol del usuario y redirigir según sea necesario
+    if (usuario.rol === 2) {
+      // Si el usuario es administrador, redirigir a bienvenidoAdmi
+      return res.redirect('/bienvenidoAdmi');
+    } else {
+      // Si el usuario no es administrador, redirigir a bienvenido
+      return res.redirect('/bienvenido');
+    }
+  
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("Error en el servidor");
+  }
+};
+
+export const logoutJwt = (req, res) => {
+  res.clearCookie('jwt');
+  return res.redirect('/');
 };
